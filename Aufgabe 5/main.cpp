@@ -17,6 +17,7 @@
 typedef std::vector<std::vector<size_t>> Graph;		// simplifies much
 
 #define BFS_NOT_VISITED SIZE_MAX
+#define ROOT_NODE SIZE_MAX
 
 auto bfs(Graph& graph, size_t start) {
 
@@ -33,14 +34,12 @@ auto bfs(Graph& graph, size_t start) {
 		Q.pop();
 
 		for (size_t t = 0; t < graph[current_node].size(); t++) {
-
 			next_node = graph[current_node][t];
 
 			if (visited[next_node] == BFS_NOT_VISITED && next_node != start) {
 				visited[next_node] = current_node;
 				Q.push(next_node);
 			}
-
 		}
 
 	}
@@ -54,7 +53,7 @@ int main(int argc, char** argv) {
 
 
 	Graph graph = {
-		/*  1 | 0x01 */ { 8, 4 },
+		/*  1 | 0x01 */ { 8, 4, 18 },
 		/*  2 | 0x02 */ { 3, 19 },
 		/*  3 | 0x03 */ { 6 },
 		/*  4 | 0x04 */ {  },
@@ -80,98 +79,72 @@ int main(int argc, char** argv) {
 		for (auto edge = node->begin(); edge != node->end(); edge++)
 			*edge -= 1;
 
-	auto calc_possible_games = [](Graph& graph) {
+	auto calc_best_path = [](Graph& graph, size_t entries) {
 
-		std::vector<size_t> sect1, sect2;					// they store the shortest path to the "root"
-		std::vector<size_t> intersection {  };				// = sect1\cap sect2
-		size_t min_count;
+		std::vector<std::vector<size_t>> sections;			// they store the shortest path to the "root"
+		std::vector<std::vector<size_t>> tmp_paths;
+		std::vector<std::vector<size_t>> paths;
+		size_t min_move_count = SIZE_MAX;
 
-		auto find_min_steps = [&]() {
+		sections.reserve(entries);
 
-			size_t
-				next,
-				counter1,
-				counter2;
+		auto calc_linked_path = [](std::vector<size_t>& linked_path, size_t start) {
+			std::vector<size_t> path;
 
-			size_t
-				iterator = 0,
-				min_count_index = 0;
-
-			min_count = SIZE_MAX;
-
-			// count the steps, which are needed to move to a node from to nodes
-			for (; iterator < intersection.size(); iterator++) {
-				
-				std::cout << "\npossible_end : " << intersection[iterator] + 1 << "\n";
-
-				next = intersection[iterator],
-				counter1 = 0,
-				counter2 = 0;
-
-				while ((next = sect1[next]) != BFS_NOT_VISITED) counter1++;					// count the first section path (by moving to the "root"-element)
-				next = intersection[iterator];
-				while ((next = sect2[next]) != BFS_NOT_VISITED) counter2++;					// ... and the second section path
-
-				if (counter1 < counter2) counter1 = counter2;								// the maximum is of course required
-				if (counter1 < min_count) {
-					min_count = counter1;
-					min_count_index = iterator;
-				}
-
-				iterator++;
+			while (linked_path[start] != BFS_NOT_VISITED) {
+				path.push_back(start);
+				start = linked_path[start];
 			}
 
-			return min_count_index;
+			std::reverse(path.begin(), path.end());
+
+			return path;
 		};
 
-		auto redef_sect_lists = [&](size_t node_index) {
-
-			std::vector<size_t> tmp;
-			size_t node_index2 = node_index;
-
-			while (sect1[node_index] != BFS_NOT_VISITED) {
-				tmp.push_back(node_index);
-				node_index = sect1[node_index];
-			}
-
-			sect1 = tmp;
-			tmp.clear();
-
-			while (sect2[node_index2] != BFS_NOT_VISITED) {
-				tmp.push_back(node_index2);
-				node_index2 = sect2[node_index2];
-			}
-
-			sect2 = tmp;
-
-		};
-
-
-		sect1 = bfs(graph, 0);
-		sect2 = bfs(graph, 1);
-
-		// get the intersection of nodes which could be reached
-		for (size_t t = 0; t < graph.size(); t++) {
-			if (sect1[t] != BFS_NOT_VISITED && sect2[t] != BFS_NOT_VISITED)
-				intersection.push_back(t);
+		// Calc with bfs the shortest path to every node (from the start node)
+		for (size_t t = 0; t < entries; t++) {
+			sections.push_back(bfs(graph, t));
 		}
 
-		redef_sect_lists(find_min_steps());
+		// get the intersection of nodes which could be reached
+		for (size_t node = 0; node < graph.size(); node++) {
 
-		return std::make_tuple(sect1, sect2, min_count);
+			for (auto section : sections) {
+				if (section[node] == BFS_NOT_VISITED) goto no_match;
+			}
+
+			{
+				size_t max_size = 0;
+				tmp_paths.clear();
+				tmp_paths.reserve(sections.size());
+
+				// Calc the path lenghts to the "flashpoint"
+				for (auto section : sections) {
+					tmp_paths.push_back(calc_linked_path(section, node));
+					if (max_size < tmp_paths.back().size()) max_size = tmp_paths.back().size();
+					if (min_move_count < max_size) goto no_match;
+				}
+
+				min_move_count = max_size;
+				paths = tmp_paths;
+			}
+
+		no_match:;
+		}
+
+		return std::make_tuple(paths, min_move_count);
 	};
 
-	auto [sect1, sect2, min_count] = calc_possible_games(graph);
+	auto [sect1, min_count] = calc_best_path(graph, 2);
 
 	std::cout << "minimum possible move count : " << min_count;
 	std::cout << "\nsteps for player on position 1 : \n";
 
-	for (auto it = sect1.begin(); it != sect1.end(); ++it)
+	for (auto it = sect1[0].begin(); it != sect1[0].end(); ++it)
 		std::cout << "\t" << *it + 1 << " <==\n";
 
-	std::cout << "\nsteps for player on position 2 : \n";
-
-	for (auto it = sect2.begin(); it != sect2.end(); ++it)
+	std::cout << "\nsteps for player on position 1 : \n";
+	for (auto it = sect1[1].begin(); it != sect1[1].end(); ++it)
 		std::cout << "\t" << *it + 1 << " <==\n";
 
 	return 0;
