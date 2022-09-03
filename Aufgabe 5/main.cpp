@@ -1,4 +1,6 @@
 #include <iostream>
+#include <fstream>
+#include <string>
 #include <vector>
 #include <queue>
 #include <tuple>
@@ -51,39 +53,40 @@ auto bfs(Graph& graph, size_t start) {
 
 int main(int argc, char** argv) {
 
+	
+	auto read_file = [](std::string file) {
+		Graph graph;
+		int n, m;
 
-	Graph graph = {
-		/*  1 | 0x01 */ { 8, 4, 18 },
-		/*  2 | 0x02 */ { 3, 19 },
-		/*  3 | 0x03 */ { 6 },
-		/*  4 | 0x04 */ {  },
-		/*  5 | 0x05 */ { 15, 12 },
-		/*  6 | 0x06 */ { 12, 2 },
-		/*  7 | 0x07 */ { 5, 8 },
-		/*  8 | 0x08 */ { 18, 4 },
-		/*  9 | 0x09 */ { 14, 1, 4 },
-		/* 10 | 0x0A */ { 3, 18, 12, 16 },
-		/* 11 | 0x0B */ { 19 },
-		/* 12 | 0x0C */ { 3 },
-		/* 13 | 0x0D */ { 7, 10 },
-		/* 14 | 0x0E */ { 17, 16, 10, 18, 1 },
-		/* 15 | 0x0F */ { 12 },
-		/* 16 | 0x10 */ { 17, 11, 19, 20 },
-		/* 17 | 0x11 */ { 9, 11 },
-		/* 18 | 0x12 */ { 7, 13 },
-		/* 19 | 0x13 */ { 20 },
-		/* 20 | 0x14 */ { 3, 10 }
+		std::ifstream in(file, std::ios::in);
+
+		if (in.is_open()) {
+			std::string in_str = "";
+			in >> n >> m;
+
+			graph = Graph(n, std::vector<size_t>());
+
+			for (size_t t = m; t != 0; t--) {
+				in >> n >> m;
+				graph[n - 1].push_back(m - 1);
+			}
+
+			graph.reserve(n);
+
+		}
+		else
+		{
+			throw std::exception("File does not excist!");
+		}
+
+		return graph;
 	};
 
-	for (auto node = graph.begin(); node != graph.end(); node++)
-		for (auto edge = node->begin(); edge != node->end(); edge++)
-			*edge -= 1;
-
 	auto calc_best_path = [](Graph& graph, size_t entries) {
-
-		std::vector<std::vector<size_t>> sections;			// they store the shortest path to the "root"
-		std::vector<std::vector<size_t>> tmp_paths;
-		std::vector<std::vector<size_t>> paths;
+		Graph
+			sections,			// they store the shortest path to the "root" from every node referenced to the next node
+			tmp_paths,			
+			paths;				// the paths trough the graph to the node
 		size_t min_move_count = SIZE_MAX;
 
 		sections.reserve(entries);
@@ -135,18 +138,41 @@ int main(int argc, char** argv) {
 		return std::make_tuple(paths, min_move_count);
 	};
 
-	auto [sect1, min_count] = calc_best_path(graph, 2);
+	std::string file = "";
 
-	std::cout << "minimum possible move count : " << min_count;
-	std::cout << "\nsteps for player on position 1 : \n";
+	try {
+		while (true) {
 
-	for (auto it = sect1[0].begin(); it != sect1[0].end(); ++it)
-		std::cout << "\t" << *it + 1 << " <==\n";
+			std::cout << "File: ";
+			std::getline(std::cin, file);
 
-	std::cout << "\nsteps for player on position 1 : \n";
-	for (auto it = sect1[1].begin(); it != sect1[1].end(); ++it)
-		std::cout << "\t" << *it + 1 << " <==\n";
+			Graph graph = read_file(file);
 
-	return 0;
+			auto [paths, min_count] = calc_best_path(graph, 2);
+
+			std::cout << "minimum possible move count : " << min_count << "; possible solution: ";
+			std::cout << "\n\path for player on position 1 : 1";
+
+			for (auto it = paths[0].begin(); it != paths[0].end(); ++it)
+				std::cout << " ==> " << *it + 1;
+
+			std::cout << "\n\path for player on position 2 : 2";
+			for (auto it = paths[1].begin(); it != paths[1].end(); ++it)
+				std::cout << " ==> " << *it + 1;
+
+		invalid_answer:
+			std::cout << "\nNew file? [Y/N]";
+			std::getline(std::cin, file);
+
+			if (!(file == "Y" || file == "y"))
+				if (file == "N" || file == "n") return 0;
+				else goto invalid_answer;
+
+		}
+	}
+	catch (std::exception e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+		return 0;
+	}
 }
 
