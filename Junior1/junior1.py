@@ -32,17 +32,16 @@ for word in words:
         else:
             govIndex = groupIndices[len(groupIndices)-2]
         
-        endGroup = ""
-        endIndex = govIndex
-        while endIndex < len(word):
-            endGroup += word[endIndex]
-            endIndex += 1
-
         # at least half the letters in important group
-        if len(endGroup) >= (len(word) * 0.5):
-            endGroups.append(endGroup)
-        else:
+        if govIndex >= (len(word) * 0.5):
             endGroups.append(None)
+        else:
+            endGroup = ""
+            endIndex = govIndex
+            while endIndex < len(word):
+                endGroup += word[endIndex]
+                endIndex += 1
+            endGroups.append(endGroup)                
 
 # checking for every word if it rhymes with another one
 solutions = []
