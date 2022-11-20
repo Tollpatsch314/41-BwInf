@@ -1,7 +1,7 @@
 import sys
 
-originFile = open("Alice_im_Wunderland.txt")
-searchFile = open(sys.argv[1])
+originFile = open("Alice_im_Wunderland.txt", encoding="utf-8")
+searchFile = open(sys.argv[1], encoding="utf-8")
 
 origin = originFile.read().translate(str.maketrans("", "", "!.»«,()_-[]")) # deleting all punctuation and satzzeichen
 search = searchFile.read()
