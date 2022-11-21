@@ -16,7 +16,7 @@ def getGroupIndices(word):
     
     return groupIndices
 
-wordFile = open(sys.argv[1])
+wordFile = open(sys.argv[1], encoding="utf-8")
 words = wordFile.read().split("\n")
 
 endGroups = []
